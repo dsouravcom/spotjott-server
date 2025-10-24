@@ -1,0 +1,332 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
+}
+
+// ==================== User Management ====================
+
+model User {
+    id                     Int      @id @default(autoincrement())
+    firstName              String
+    lastName               String
+    email                  String   @unique
+    password               String
+    profilePicture         String?
+    profilePicturePublicId String?
+    bio                    String?
+    userTags               Json?    @map("tags")
+    followersCount         Int      @default(0)
+    followingCount         Int      @default(0)
+    createdAt              DateTime @default(now())
+    updatedAt              DateTime @updatedAt
+
+    // Relations
+    jots                  Jot[]
+    diaries               Diary[]
+    diaryEntries          DiaryEntry[]
+    tags                  Tag[]
+    stories               Story[]
+    storyViews            StoryView[]
+    jotComments           JotComment[]
+    jotReactions          JotReaction[]
+    emotionTrackers       EmotionTracker[]
+    fcmTokens             FCMToken[]
+    notificationsReceived Notification[]   @relation("NotificationReceiver")
+    notificationsSent     Notification[]   @relation("NotificationSender")
+    following             Follow[]         @relation("Follower")
+    followers             Follow[]         @relation("Following")
+
+    @@map("Users")
+    @@index([email])
+}
+
+// ==================== Follow System ====================
+
+model Follow {
+    id          Int      @id @default(autoincrement())
+    followerId  Int
+    followingId Int
+    createdAt   DateTime @default(now())
+    updatedAt   DateTime @updatedAt
+
+    // Relations
+    follower  User @relation("Follower", fields: [followerId], references: [id], onDelete: Cascade)
+    following User @relation("Following", fields: [followingId], references: [id], onDelete: Cascade)
+
+    @@unique([followerId, followingId])
+    @@index([followerId])
+    @@index([followingId])
+    @@map("Follows")
+}
+
+// ==================== Jots (Social Posts) ====================
+
+model Jot {
+    id             Int        @id @default(autoincrement())
+    userId         Int
+    content        String     @db.Text
+    mediaUrl       String?
+    mediaPublicId  String?
+    mediaType      MediaType?
+    reactionsCount Int        @default(0)
+    commentsCount  Int        @default(0)
+    createdAt      DateTime   @default(now())
+    updatedAt      DateTime   @updatedAt
+
+    // Relations
+    user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+    comments  JotComment[]
+    reactions JotReaction[]
+
+    @@map("Jots")
+}
+
+model JotComment {
+    id        Int      @id @default(autoincrement())
+    jotId     Int
+    userId    Int
+    content   String   @db.Text
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    // Relations
+    jot  Jot  @relation(fields: [jotId], references: [id], onDelete: Cascade)
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@map("JotComments")
+}
+
+model JotReaction {
+    id           Int          @id @default(autoincrement())
+    jotId        Int
+    userId       Int
+    reactionType ReactionType @default(like)
+    createdAt    DateTime     @default(now())
+    updatedAt    DateTime     @updatedAt
+
+    // Relations
+    jot  Jot  @relation(fields: [jotId], references: [id], onDelete: Cascade)
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@unique([jotId, userId])
+    @@map("JotReactions")
+}
+
+// ==================== Stories ====================
+
+model Story {
+    id            Int       @id @default(autoincrement())
+    userId        Int
+    mediaUrl      String
+    mediaPublicId String?
+    mediaType     MediaType @default(image)
+    caption       String?   @db.Text
+    viewsCount    Int       @default(0)
+    expiresAt     DateTime
+    createdAt     DateTime  @default(now())
+    updatedAt     DateTime  @updatedAt
+
+    // Relations
+    user  User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+    views StoryView[]
+
+    @@index([userId])
+    @@index([expiresAt])
+    @@map("Stories")
+}
+
+model StoryView {
+    id        Int      @id @default(autoincrement())
+    storyId   Int
+    viewerId  Int
+    createdAt DateTime @default(now())
+
+    // Relations
+    story  Story @relation(fields: [storyId], references: [id], onDelete: Cascade)
+    viewer User  @relation(fields: [viewerId], references: [id], onDelete: Cascade)
+
+    @@unique([storyId, viewerId])
+    @@index([storyId])
+    @@index([viewerId])
+    @@map("StoryViews")
+}
+
+// ==================== Diary System ====================
+
+model Diary {
+    id          Int      @id @default(autoincrement())
+    userId      Int
+    name        String
+    description String?  @db.Text
+    isPublic    Boolean  @default(false)
+    createdAt   DateTime @default(now())
+    updatedAt   DateTime @updatedAt
+
+    // Relations
+    user    User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+    entries DiaryEntry[]
+
+    @@map("Diaries")
+}
+
+model DiaryEntry {
+    id         Int      @id @default(autoincrement())
+    title      String
+    content    String   @db.Text
+    coverImage String?
+    diaryId    Int
+    userId     Int
+    favorite   Boolean  @default(false)
+    createdAt  DateTime @default(now())
+    updatedAt  DateTime @updatedAt
+
+    // Relations
+    diary Diary           @relation(fields: [diaryId], references: [id], onDelete: Cascade)
+    user  User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+    tags  DiaryEntryTag[]
+
+    @@map("DiaryEntries")
+}
+
+model Tag {
+    id        Int      @id @default(autoincrement())
+    name      String
+    userId    Int
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    // Relations
+    user         User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+    diaryEntries DiaryEntryTag[]
+
+    @@map("Tags")
+}
+
+model DiaryEntryTag {
+    id           Int      @id @default(autoincrement())
+    diaryEntryId Int
+    tagId        Int
+    createdAt    DateTime @default(now())
+    updatedAt    DateTime @updatedAt
+
+    // Relations
+    diaryEntry DiaryEntry @relation(fields: [diaryEntryId], references: [id], onDelete: Cascade)
+    tag        Tag        @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+    @@unique([diaryEntryId, tagId])
+    @@map("DiaryEntryTags")
+}
+
+// ==================== Emotion Tracking ====================
+
+model Emotion {
+    id          Int      @id @default(autoincrement())
+    emotionSlug String   @unique
+    emotionName String?
+    createdAt   DateTime @default(now())
+    updatedAt   DateTime @updatedAt
+
+    // Relations
+    trackers EmotionTracker[]
+
+    @@index([emotionSlug])
+    @@map("Emotions")
+}
+
+model EmotionTracker {
+    id        Int      @id @default(autoincrement())
+    userId    Int
+    emotionId Int
+    date      DateTime @default(now())
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    // Relations
+    user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+    emotion Emotion @relation(fields: [emotionId], references: [id], onDelete: Cascade)
+
+    @@map("EmotionTrackers")
+}
+
+// ==================== Notifications ====================
+
+model Notification {
+    id        Int              @id @default(autoincrement())
+    userId    Int
+    senderId  Int?
+    type      NotificationType
+    title     String
+    body      String           @db.Text
+    isRead    Boolean          @default(false)
+    data      Json?
+    imageUrl  String?
+    link      String?
+    createdAt DateTime         @default(now())
+    updatedAt DateTime         @updatedAt
+
+    // Relations
+    sender   User? @relation("NotificationSender", fields: [senderId], references: [id], onDelete: SetNull)
+    receiver User  @relation("NotificationReceiver", fields: [userId], references: [id], onDelete: Cascade)
+
+    @@index([userId, isRead])
+    @@index([userId, createdAt])
+    @@map("Notifications")
+}
+
+// ==================== FCM Tokens ====================
+
+model FCMToken {
+    id         Int        @id @default(autoincrement())
+    userId     Int
+    token      String     @unique @db.VarChar(500)
+    deviceType DeviceType @default(web)
+    deviceId   String?
+    isActive   Boolean    @default(true)
+    lastUsed   DateTime   @default(now())
+    createdAt  DateTime   @default(now())
+    updatedAt  DateTime   @updatedAt
+
+    // Relations
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@index([userId, isActive])
+    @@index([token])
+    @@map("FCMTokens")
+}
+
+// ==================== Enums ====================
+
+enum MediaType {
+    image
+    video
+}
+
+enum ReactionType {
+    like
+    love
+    insightful
+    celebrate
+}
+
+enum NotificationType {
+    jot_reaction
+    jot_comment
+    entry_reaction
+    entry_comment
+    follow
+    mention
+    system
+}
+
+enum DeviceType {
+    web
+    android
+    ios
+}
