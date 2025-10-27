@@ -179,6 +179,15 @@ export const login = async (
     req: AuthenticatedRequest,
     res: Response
 ): Promise<void> => {
+    Logger.info("login request origin:", {
+        ip: req.ip,
+        headers: {
+            "x-forwarded-for": req.get("X-Forwarded-For"),
+            "x-real-ip": req.get("X-Real-IP"),
+        },
+        userAgent: req.get("User-Agent"),
+    });
+    Logger.info("login request:", req);
     try {
         const { email, password } = req.body;
 

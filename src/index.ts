@@ -51,7 +51,7 @@ const corsOptions = {
     credentials: true,
     optionsSuccessStatus: 200,
 };
-app.use(cors(corsOptions));
+app.use(cors());
 
 // Logging
 app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
