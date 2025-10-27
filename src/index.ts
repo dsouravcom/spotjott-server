@@ -46,11 +46,11 @@ const limiter = rateLimit({
 app.use(limiter);
 
 // CORS configuration
-const corsOptions = {
-    origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(",") : "*",
-    credentials: true,
-    optionsSuccessStatus: 200,
-};
+// const corsOptions = {
+//     origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(",") : "*",
+//     credentials: true,
+//     optionsSuccessStatus: 200,
+// };
 app.use(cors());
 
 // Logging
