@@ -1,6 +1,7 @@
 import bcrypt from "bcrypt";
 import { Response } from "express";
 import jwt from "jsonwebtoken";
+import { inspect } from "util";
 import prisma from "../lib/prisma";
 import { AuthenticatedRequest } from "../types";
 import { uploadImage } from "../utils/cloudinary";
@@ -179,15 +180,17 @@ export const login = async (
     req: AuthenticatedRequest,
     res: Response
 ): Promise<void> => {
-    Logger.info("login request origin:", {
-        ip: req.ip,
-        headers: {
-            "x-forwarded-for": req.get("X-Forwarded-For"),
-            "x-real-ip": req.get("X-Real-IP"),
-        },
-        userAgent: req.get("User-Agent"),
-    });
-    Logger.info("login request:", req);
+    // Log full request object with util.inspect to avoid circular JSON errors
+    Logger.info("========== FULL LOGIN REQUEST ==========");
+    Logger.info(
+        inspect(req, {
+            depth: null,
+            showHidden: false,
+            colors: false,
+        })
+    );
+    Logger.info("========================================");
+
     try {
         const { email, password } = req.body;
 
