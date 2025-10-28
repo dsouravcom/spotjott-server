@@ -62,6 +62,7 @@ app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
 // Health check endpoint
 app.get("/", (_req: Request, res: Response) => {
+    Logger.log("Health check");
     res.json({
         success: true,
         message: "SpotJott API Server",
